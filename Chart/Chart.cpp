@@ -9,7 +9,15 @@
 #include <QPaintEvent>
 #include <QPainter>
 
-const int maxValueNum = 20;
+#include <algorithm>
+#include <random>
+#include <ctime>
+
+#include <QDebug>
+
+const int maxValueNum = 180;
+std::random_device rd;
+
 
 struct Smart_Mesh_Data
 {
@@ -30,12 +38,12 @@ struct nodeData
 struct nodeInfo
 {
 	unsigned char mac[8];
-	QTime lastUpdate;
+	time_t lastUpdate;
 	QLinkedList<nodeData> dataSequence;
 	nodeInfo(unsigned char *m)
 	{
 		memcpy(mac, m, sizeof(mac));
-		lastUpdate = QTime::currentTime();
+		lastUpdate = clock();
 	}
 
 	/*更新数据*/
@@ -48,7 +56,7 @@ struct nodeInfo
 		{
 			dataSequence.pop_front();
 		}
-		lastUpdate = QTime::currentTime();
+		lastUpdate = clock();
 	}
 
 	/*若没有接受到数据，则用之前的数据自动填充*/
@@ -78,6 +86,40 @@ struct Chart::ChartData
 
 void getData(Smart_Mesh_Data *data)
 {
+	time(reinterpret_cast<time_t *>(data->utcSecs));
+	*reinterpret_cast<unsigned int *>(&data->utcUsecs) = rd()%(1000*1000);
+	int a = rd() % 5;
+
+	if (a == 0)
+	{
+		unsigned char mac[10] = {10,56,89,249,61,77,93,132,202,85};
+		memcpy(data->macAddress, mac, 8);
+	}
+	else if (a == 1)
+	{
+		unsigned char mac[10] = { 73,35,159,136,241,78,65,26,16,94 };
+		memcpy(data->macAddress, mac, 8);
+	}
+	else if (a == 2)
+	{
+		unsigned char mac[10] = { 45,82,34,189,216,217,143,19,27,35 };
+		memcpy(data->macAddress, mac, 8);
+	}
+	else if (a == 3)
+	{
+		unsigned char mac[10] = { 202,115,80,214,45,98,3,177,223,165 };
+		memcpy(data->macAddress, mac, 8);
+	}
+	else if (a == 4)
+	{
+		unsigned char mac[10] = { 97,54,96,71,16,102,125,105,75,45 };
+		memcpy(data->macAddress, mac, 8);
+	}
+
+	for (int i = 2; i < 34; ++i)
+	{
+		data->data[i] = rd() % 2048 + (i-2)*2048;
+	}
 
 }
 
@@ -96,8 +138,8 @@ Chart::Chart(QWidget *parent): QWidget(parent)
 		data->dialog = new NodeDialog(this);
 		data->updateTimer = new QTimer(this);
 
-		data->nodeList->setGeometry(0, 0, 100, 25);
-		data->setNode->setGeometry(110, 0, 100, 25);
+		data->nodeList->setGeometry(130, 10, 180, 25);
+		data->setNode->setGeometry(20, 10, 100, 25);
 
 		connect(data->setNode, &QPushButton::clicked, [this]() 
 		{
@@ -107,7 +149,71 @@ Chart::Chart(QWidget *parent): QWidget(parent)
 
 		connect(data->updateTimer, &QTimer::timeout, [this]()
 		{
+			Smart_Mesh_Data tempData = data->tempData;
 			getData(&data->tempData);
+
+			if (memcmp(&tempData, &data->tempData, sizeof(Smart_Mesh_Data)) != 0)
+			{
+				bool find = false;
+
+				for (auto &t : data->allNodes)
+				{
+					if (memcmp(data->tempData.macAddress, t.mac, 8) == 0)
+					{
+						find = true;
+						t.update(data->tempData.data + 2);
+					}
+					else
+					{
+						t.autoFill();
+					}
+				}
+
+				if (!find)
+				{
+					data->allNodes.push_back(nodeInfo(data->tempData.macAddress));
+					data->allNodes.last().update(data->tempData.data+2);
+
+					QString mac;
+					char code[] = {'1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+					for (int i = 0; i < 8; ++i)
+					{
+						mac += code[data->tempData.macAddress[i] / 16];
+						mac+= code[data->tempData.macAddress[i] / 16];
+						mac += ':';
+					}
+
+					mac.chop(1);
+
+					data->nodeList->addItem(mac);
+				}
+			}
+
+			time_t currentTime = clock();
+			int index = 0;
+			for (auto it = data->allNodes.begin(); it != data->allNodes.end(); ++index)
+			{
+
+				if (currentTime - it->lastUpdate>=60000)
+				{
+					auto tempIt = it++;
+					data->allNodes.erase(tempIt);
+					if (data->currentNode > index)
+					{
+						--data->currentNode;
+					}
+					else if (data->currentNode == index)
+					{
+						data->currentNode = -1;
+					}
+				}
+				else
+				{
+					++it;
+				}
+
+			}
+
 			update();
 		}
 		);
@@ -116,11 +222,14 @@ Chart::Chart(QWidget *parent): QWidget(parent)
 		connect(data->nodeList,index, [this](int a) 
 		{
 			data->currentNode = a;
+			update();
 		}
 		);
 
-		setMaximumSize(800,600);
-		setMinimumSize(800,600);
+		data->updateTimer->start(500);
+
+		setMaximumSize(940,670);
+		setMinimumSize(940,670);
 	}
 	catch (std::bad_alloc &)
 	{
@@ -145,12 +254,18 @@ bool * Chart::getNodeVisible()
 
 void Chart::paintEvent(QPaintEvent * e)
 {
+	//if (data->currentNode == -1)
+	//{
+	//	return;
+	//}
+
 	QPainter painter(this);
+	painter.fillRect(rect(), Qt::black);
+	painter.fillRect(20,50,width()-40,height()-70,Qt::white);
+
+
+
+
+
 	
-	
-
-
-
-
-
 }

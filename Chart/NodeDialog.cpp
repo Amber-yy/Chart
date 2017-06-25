@@ -59,4 +59,5 @@ NodeDialog::NodeDialog(QWidget *parent):QDialog(parent)
 
 NodeDialog::~NodeDialog()
 {
+
 }
