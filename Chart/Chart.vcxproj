@@ -90,6 +90,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="NodeDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Chart.h">
@@ -117,6 +118,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_Chart.h" />
+    <ClInclude Include="NodeDialog.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Chart.qrc">
